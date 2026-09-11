@@ -63,13 +63,22 @@ const customers = new CustomerSystem(rig.scene, state, blockedCells, {
 });
 
 let selectedBuild: BuildKind | null = null;
+let movingId: number | null = null;   // prop being relocated (free)
 let dirty = false;
 const ghost = buildGhost();
 ghost.visible = false;
 rig.scene.add(ghost);
 
 const hud = new Hud(state, {
-  onSelectBuild: (k) => { selectedBuild = k; ghost.visible = false; },
+  onSelectBuild: (k) => { selectedBuild = k; if (k) stopMove(); ghost.visible = false; },
+  onMove: (id) => { if (id < 0) { stopMove(); return; } hud.select(null); startMove(id); },
+  onRemoveDecor: (d) => {
+    state.money += Math.floor(DECORS[d.kind].cost / 2);
+    state.decors.splice(state.decors.indexOf(d), 1);
+    const m = propMeshes.get(d.id); if (m) { propRoot.remove(m); propMeshes.delete(d.id); }
+    customers.replanAll();
+    sfx.remove(); dirty = true; hud.refresh();
+  },
   onUpgrade: (stall, which) => {
     const cost = upgradeCost(stall, which);
     if (state.money < cost) return;
@@ -124,14 +133,45 @@ checkGoals();
 if (state.stalls.length === 0) hud.toast('🥕 青果の露店を置いてお客さんを呼ぼう');
 
 // --- placement / picking --------------------------------------------------
-function canPlace(cell: Cell): string | null {
+function findProp(id: number): Stall | Decor | undefined {
+  return state.stalls.find((s) => s.id === id) ?? state.decors.find((d) => d.id === id);
+}
+
+function canPlace(cell: Cell, ignoreId: number | null = null): string | null {
   if (!inBounds(cell)) return null;
   const k = key(cell);
   if (k === key(ENTRANCE) || k === key(EXIT)) return '入口と出口には置けません';
-  if (blockedCells().has(k)) return 'そこには既に何かあります';
-  const blocked = blockedCells(); blocked.add(k);
+  const blocked = blockedCells();
+  if (ignoreId !== null) { const p = findProp(ignoreId); if (p) blocked.delete(key(p.cell)); }
+  if (blocked.has(k)) return 'そこには既に何かあります';
+  blocked.add(k);
   if (!findPath(ENTRANCE, EXIT, blocked).length) return '通り道をふさげません';
   return '';
+}
+
+function startMove(id: number) {
+  const p = findProp(id);
+  const m = propMeshes.get(id);
+  if (!p || !m) return;
+  movingId = id;
+  m.position.y = 0.6; // lift to show it is being carried
+  hud.toast('移動先のタイルをクリック（Esc で中止）');
+}
+function stopMove() {
+  if (movingId === null) return;
+  const m = propMeshes.get(movingId); if (m) m.position.y = 0;
+  movingId = null; ghost.visible = false;
+}
+function moveTo(cell: Cell) {
+  if (movingId === null) return;
+  const p = findProp(movingId); const m = propMeshes.get(movingId);
+  if (!p || !m) { stopMove(); return; }
+  p.cell = cell;
+  const [x, z] = cellToWorld(cell);
+  m.position.set(x, 0, z);
+  movingId = null; ghost.visible = false;
+  customers.replanAll();
+  sfx.place(); dirty = true; hud.refresh();
 }
 
 function place(kind: BuildKind, cell: Cell) {
@@ -154,11 +194,11 @@ function place(kind: BuildKind, cell: Cell) {
 let downX = 0, downY = 0;
 canvas.addEventListener('pointerdown', (e) => { downX = e.clientX; downY = e.clientY; });
 canvas.addEventListener('pointermove', (e) => {
-  if (!selectedBuild) { ghost.visible = false; return; }
+  if (!selectedBuild && movingId === null) { ghost.visible = false; return; }
   const hit = rig.pickGround(e.clientX, e.clientY);
   if (!hit) { ghost.visible = false; return; }
   const cell = worldToCell(hit.x, hit.z);
-  const err = canPlace(cell);
+  const err = canPlace(cell, movingId);
   ghost.visible = err !== null;
   if (err === null) return;
   const [x, z] = cellToWorld(cell);
@@ -170,6 +210,13 @@ canvas.addEventListener('pointerup', (e) => {
   const hit = rig.pickGround(e.clientX, e.clientY);
   if (!hit) return;
   const cell = worldToCell(hit.x, hit.z);
+  if (movingId !== null) {
+    const err = canPlace(cell, movingId);
+    if (err === null) { stopMove(); return; }
+    if (err) { hud.toast(err); sfx.deny(); return; }
+    moveTo(cell);
+    return;
+  }
   if (selectedBuild) {
     const err = canPlace(cell);
     if (err === null) return;
@@ -183,7 +230,8 @@ canvas.addEventListener('pointerup', (e) => {
   const hits = rig.raycaster.intersectObjects(propRoot.children, true);
   const id = hits[0]?.object.userData.propId as number | undefined;
   const stall = id !== undefined ? state.stalls.find((s) => s.id === id) : undefined;
-  if (stall) hud.showStall(stall); else hud.closePanel();
+  const decor = id !== undefined ? state.decors.find((d) => d.id === id) : undefined;
+  if (stall) hud.showStall(stall); else if (decor) hud.showDecor(decor); else hud.closePanel();
 });
 
 // --- loop -----------------------------------------------------------------

@@ -49,6 +49,25 @@ export class CustomerSystem {
     for (const c of [...this.customers]) this.step(c, dt);
   }
 
+  /** Called after any prop moved: every walking customer re-plans its route. */
+  replanAll() {
+    for (const c of this.customers) {
+      if (c.phase === 'leaving') { this.retarget(c, EXIT); if (!c.path.length) this.remove(c); continue; }
+      const stall = this.state.stalls.find((s) => s.id === c.stallId);
+      if (!stall) { this.leave(c, false); continue; }
+      const q = this.queues.get(stall.id) ?? [];
+      const goal = this.queueCellFor(stall, Math.max(q.indexOf(c), 0));
+      if (key(c.cell) !== key(goal) || c.path.length) {
+        c.phase = 'toQueue';
+        // finish the current step first so the position stays continuous
+        const from = c.path.length ? c.path[0] : c.cell;
+        const rest = findPath(from, goal, this.blocked());
+        c.path = c.path.length ? [from, ...rest] : rest;
+        if (!c.path.length && key(c.cell) !== key(goal)) this.leave(c, false);
+      }
+    }
+  }
+
   /** Called when a stall is removed: send its queue home. */
   stallRemoved(id: number) {
     for (const c of this.queues.get(id) ?? []) this.leave(c, false);

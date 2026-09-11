@@ -62,6 +62,17 @@ export const GOALS: Goal[] = [
   { id: 'rev2000', text: '売上 2000 を達成',       reward: 400, done: (s) => s.revenue >= 2000 },
   { id: 'statue',  text: '記念像を建てる',          reward: 600, done: (s) => s.decors.some((d) => d.kind === 'statue') },
   { id: 'rev5000', text: '売上 5000 を達成',       reward: 800, done: (s) => s.revenue >= 5000 },
+  { id: 'kinds4',  text: '4 種類の露店をそろえる',  reward: 600, done: (s) => new Set(s.stalls.map((t) => t.kind)).size >= 4 },
+  { id: 'serve500',text: 'お客さん 500 人に販売',   reward: 800, done: (s) => s.served >= 500 },
+  { id: 'decor10', text: '装飾を 10 個置く',       reward: 900, done: (s) => s.decors.length >= 10 },
+  { id: 'stalls8', text: '露店を 8 軒にする',       reward: 1200, done: (s) => s.stalls.length >= 8 },
+  { id: 'lv5',     text: 'どれかの露店を合計 Lv5 に', reward: 1000, done: (s) => s.stalls.some((t) => t.stockLevel + t.speedLevel >= 5) },
+  { id: 'rev10000',text: '売上 10000 を達成',      reward: 1500, done: (s) => s.revenue >= 10000 },
+  { id: 'serve1000',text: 'お客さん 1000 人に販売', reward: 2000, done: (s) => s.served >= 1000 },
+  { id: 'rev25000',text: '売上 25000 を達成',      reward: 3000, done: (s) => s.revenue >= 25000 },
+  { id: 'stalls12',text: '露店を 12 軒にする',      reward: 3000, done: (s) => s.stalls.length >= 12 },
+  { id: 'rev50000',text: '売上 50000 を達成',      reward: 5000, done: (s) => s.revenue >= 50000 },
+  { id: 'rev100000',text: '売上 100000 を達成',    reward: 10000, done: (s) => s.revenue >= 100000 },
 ];
 export const currentGoal = (st: GameState) => GOALS.find((g) => !st.goalsDone.includes(g.id)) ?? null;
 
