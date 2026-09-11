@@ -20,6 +20,11 @@ export class Hud {
 
   constructor(private state: GameState, private cb: HudCallbacks) {
     const build = $('build');
+    const cancel = document.createElement('button');
+    cancel.id = 'cancel'; cancel.className = 'cancel'; cancel.hidden = true;
+    cancel.innerHTML = '<span class="ico">✕</span><span>解除</span><span class="cost">選択中</span>';
+    cancel.addEventListener('click', () => { this.select(null); this.cb.onMove(-1); });
+    build.appendChild(cancel);
     const kinds: BuildKind[] = [...Object.keys(STALLS), ...Object.keys(DECORS)] as BuildKind[];
     for (const kind of kinds) {
       const def = kind in STALLS ? STALLS[kind as keyof typeof STALLS] : DECORS[kind as keyof typeof DECORS];
@@ -38,6 +43,8 @@ export class Hud {
   select(kind: BuildKind | null) {
     this.selected = kind;
     this.buttons.forEach((b, k) => b.classList.toggle('selected', k === kind));
+    $('cancel').hidden = kind === null;
+    document.body.classList.toggle('building', kind !== null);
     if (kind) this.closePanel();
     this.cb.onSelectBuild(kind);
   }

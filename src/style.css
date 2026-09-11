@@ -40,6 +40,9 @@ button.selected { background: var(--orange); color: #fff; border-color: #c96a12;
 #build button { min-width: 84px; display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 13px; }
 #build button .ico { font-size: 24px; }
 #build button .cost { font-size: 11px; color: #7a6a58; }
+#build button[hidden] { display: none; }
+#build button.cancel { background: #ffe4e0; border-color: #c94b3f; }
+body.building #game { cursor: copy; }
 
 #panel {
   position: absolute; right: 10px; top: 60px; width: 230px;

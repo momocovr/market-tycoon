@@ -210,6 +210,16 @@ canvas.addEventListener('pointerup', (e) => {
   const hit = rig.pickGround(e.clientX, e.clientY);
   if (!hit) return;
   const cell = worldToCell(hit.x, hit.z);
+  // A click on an existing prop always opens its panel, even while a build kind is selected.
+  rig.raycaster.setFromCamera(rig.ndc(e.clientX, e.clientY), rig.camera);
+  const propHit = rig.raycaster.intersectObjects(propRoot.children, true)[0]?.object.userData.propId as number | undefined;
+  if (propHit !== undefined && movingId === null) {
+    if (selectedBuild) hud.select(null);
+    const s = state.stalls.find((t) => t.id === propHit);
+    const d = state.decors.find((t) => t.id === propHit);
+    if (s) hud.showStall(s); else if (d) hud.showDecor(d);
+    return;
+  }
   if (movingId !== null) {
     const err = canPlace(cell, movingId);
     if (err === null) { stopMove(); return; }
@@ -225,14 +235,10 @@ canvas.addEventListener('pointerup', (e) => {
     if (state.money < buildCost(selectedBuild)) hud.select(null);
     return;
   }
-  // pick an existing prop
-  rig.raycaster.setFromCamera(rig.ndc(e.clientX, e.clientY), rig.camera);
-  const hits = rig.raycaster.intersectObjects(propRoot.children, true);
-  const id = hits[0]?.object.userData.propId as number | undefined;
-  const stall = id !== undefined ? state.stalls.find((s) => s.id === id) : undefined;
-  const decor = id !== undefined ? state.decors.find((d) => d.id === id) : undefined;
-  if (stall) hud.showStall(stall); else if (decor) hud.showDecor(decor); else hud.closePanel();
+  hud.closePanel();
 });
+// right-click / long-press cancels build or move mode
+canvas.addEventListener('contextmenu', (e) => { e.preventDefault(); hud.select(null); stopMove(); });
 
 // --- loop -----------------------------------------------------------------
 const timer = new THREE.Timer();
