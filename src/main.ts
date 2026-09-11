@@ -105,7 +105,7 @@ const hud = new Hud(state, {
     if (state.money < cost) return;
     state.money -= cost;
     if (which === 'stock') stall.stockLevel++; else stall.speedLevel++;
-    sfx.unlock(); dirty = true; hud.refresh(); checkGoals();
+    sfx.register(); dirty = true; hud.refresh(); checkGoals();
     // celebration: burst of coins + floating label + a little hop
     const m = propMeshes.get(stall.id);
     if (m) {
@@ -231,7 +231,7 @@ function place(kind: BuildKind, cell: Cell) {
     state.decors.push(d);
   }
   addPropMesh(id, kind, cell);
-  sfx.place(); dirty = true; hud.refresh(); checkGoals();
+  sfx.register(); sfx.place(); dirty = true; hud.refresh(); checkGoals();
 }
 
 let downX = 0, downY = 0;
