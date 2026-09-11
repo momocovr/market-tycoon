@@ -82,6 +82,12 @@ export function buildDecor(kind: DecorKind): THREE.Group {
       g.add(mesh(new THREE.BoxGeometry(1.5, 0.2, 0.7), 'grass', 0.95));
       break;
     }
+    case 'fountain': {
+      g.add(mesh(new THREE.CylinderGeometry(1, 1, 0.4, 12), 'pave', 0.2));
+      g.add(mesh(new THREE.CylinderGeometry(0.85, 0.85, 0.05, 12), 'sky', 0.42));
+      g.add(mesh(new THREE.CylinderGeometry(0.25, 0.25, 0.6, 8), 'pave', 0.7));
+      break;
+    }
     case 'statue': {
       g.add(mesh(new THREE.CylinderGeometry(1, 1, 0.15, 12), 'grass', 0.07));
       g.add(mesh(new THREE.BoxGeometry(0.5, 0.7, 0.5), 'white', 0.55));
@@ -99,8 +105,8 @@ export function buildDecor(kind: DecorKind): THREE.Group {
   return g;
 }
 
-export function buildProp(kind: BuildKind): THREE.Object3D {
-  const glb = instantiate(isStallKind(kind) ? `prop_kiosk_${kind}` : `deco_${kind}`);
+export function buildProp(kind: BuildKind, tier = 0): THREE.Object3D {
+  const glb = instantiate(isStallKind(kind) ? `prop_kiosk_${kind}_lv${tier}` : `deco_${kind}`) ?? (isStallKind(kind) ? instantiate(`prop_kiosk_${kind}`) : null);
   if (glb) return glb;
   return isStallKind(kind) ? buildStall(kind) : buildDecor(kind);
 }

@@ -3,7 +3,7 @@ import { createScene } from './scene/setup';
 import { buildGround, buildGhost, buildProp } from './world/props';
 import { cellToWorld, worldToCell, inBounds, key, findPath, ENTRANCE, EXIT, GRID_H, type Cell } from './world/grid';
 import { CustomerSystem } from './sim/customers';
-import { STALLS, DECORS, isStallKind, isUnlocked, buildCost, spawnRate, upgradeCost, currentGoal, incomePerSecond, type BuildKind, type Stall, type Decor } from './sim/economy';
+import { STALLS, DECORS, isStallKind, isUnlocked, buildCost, spawnRate, upgradeCost, currentGoal, incomePerSecond, stallTier, type BuildKind, type Stall, type Decor } from './sim/economy';
 import { sfx } from './ui/sfx';
 import { Hud } from './ui/hud';
 import { load, save, clear } from './save/save';
@@ -47,8 +47,8 @@ function anchorOpen() {
   if (p) hud.anchorPanel(p[0], p[1]);
 }
 
-function addPropMesh(id: number, kind: BuildKind, cell: Cell, rot = 0) {
-  const g = buildProp(kind);
+function addPropMesh(id: number, kind: BuildKind, cell: Cell, rot = 0, tier = 0) {
+  const g = buildProp(kind, tier);
   const [x, z] = cellToWorld(cell);
   g.position.set(x, 0, z);
   g.rotation.y = rot * Math.PI / 2;
@@ -56,7 +56,7 @@ function addPropMesh(id: number, kind: BuildKind, cell: Cell, rot = 0) {
   propRoot.add(g);
   propMeshes.set(id, g);
 }
-for (const st of state.stalls) addPropMesh(st.id, st.kind, st.cell);
+for (const st of state.stalls) addPropMesh(st.id, st.kind, st.cell, 0, stallTier(st));
 for (const d of state.decors) addPropMesh(d.id, d.kind, d.cell, d.rot ?? 0);
 
 // --- coin pop effect ------------------------------------------------------
@@ -104,8 +104,16 @@ const hud = new Hud(state, {
     const cost = upgradeCost(stall, which);
     if (state.money < cost) return;
     state.money -= cost;
+    const tierBefore = stallTier(stall);
     if (which === 'stock') stall.stockLevel++; else stall.speedLevel++;
     sfx.register(); dirty = true; hud.refresh(); checkGoals();
+    if (stallTier(stall) !== tierBefore) {
+      // swap in the fancier building
+      const old = propMeshes.get(stall.id); if (old) { propRoot.remove(old); propMeshes.delete(stall.id); }
+      addPropMesh(stall.id, stall.kind, stall.cell, 0, stallTier(stall));
+      hud.toast(`${STALLS[stall.kind].icon} ${STALLS[stall.kind].name}の露店が豪華になった！`);
+      setTimeout(() => sfx.unlock(), 350);
+    }
     // celebration: burst of coins + floating label + a little hop
     const m = propMeshes.get(stall.id);
     if (m) {

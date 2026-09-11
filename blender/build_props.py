@@ -18,7 +18,8 @@ HEX = {
     "teal": 0x3BAA9A, "tealDark": 0x2E8A7D, "orange": 0xF28C28, "yellow": 0xF6C544,
     "cream": 0xFFF4DE, "wood": 0xB9793A, "woodDark": 0x8E5A28, "red": 0xE45B4F,
     "skin": 0xF4C9A6, "white": 0xFFFFFF, "ink": 0x3B3A45, "glass": 0xBFE6F5,
-    "pink": 0xF39BC0, "purple": 0x8E6BC1, "green": 0x7CC46B, "brown": 0x9C6B3C,
+    "pink": 0xF39BC0, "purple": 0x8E6BC1, "green": 0x7CC46B, "brown": 0xB5845A,
+    "crust": 0xD9924A, "coffee": 0x4A2C1A,
 }
 
 def srgb_to_linear(c):
@@ -299,12 +300,24 @@ def customer(coll, mat, shirt, hair, name):
     return p.finish()
 
 # ---------------------------------------------------------------- run
+def load_shops():
+    import importlib.util, os
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)) if "__file__" in globals() else r"D:\market_tycoonlender", "shops.py")
+    spec = importlib.util.spec_from_file_location("mp_shops", path)
+    mod = importlib.util.module_from_spec(spec); spec.loader.exec_module(mod)
+    return mod
+
 def build():
     sc, coll = get_scene()
     mat = get_material()
+    shops = load_shops()
     objs = []
     for k in AWNING:
-        objs.append(kiosk(k, coll, mat))
+        for tier in range(3):
+            p = Prop(f"prop_kiosk_{k}_lv{tier}", coll, mat)
+            shops.shop(p, k, tier)
+            objs.append(p.finish())
+    pf = Prop("deco_fountain", coll, mat); shops.fountain(pf); objs.append(pf.finish())
     objs += [parasol(coll, mat), bench(coll, mat), planter(coll, mat), hedge(coll, mat), lamp(coll, mat), statue(coll, mat)]
     objs += [customer(coll, mat, s, h, f"char_customer_{i}") for i, (s, h) in enumerate(
         [("teal", "wood"), ("orange", "ink"), ("red", "brown"), ("purple", "yellow"), ("green", "ink"), ("yellow", "wood")])]
@@ -315,12 +328,12 @@ def build():
     return objs
 
 def export(objs):
-    bpy.ops.object.select_all(action="DESELECT")
+    coll = bpy.data.collections[COLL]
+    lc = next(l for l in bpy.context.view_layer.layer_collection.children if l.collection == coll)
+    bpy.context.view_layer.active_layer_collection = lc
     for o in objs:
-        o.select_set(True)
         o.location = (0, 0, 0)     # export at origin
-    bpy.context.view_layer.objects.active = objs[0]
-    kw = dict(filepath=OUT, export_format="GLB", use_selection=True, export_yup=True,
+    kw = dict(filepath=OUT, export_format="GLB", use_selection=False, use_active_collection=True, export_yup=True,
               export_apply=True, export_materials="EXPORT", export_normals=True,
               export_texcoords=False, export_animations=False, export_skins=False)
     try:

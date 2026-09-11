@@ -1,7 +1,7 @@
 import type { Cell } from '../world/grid';
 
 export type StallKind = 'vegetable' | 'bakery' | 'cafe' | 'flower';
-export type DecorKind = 'parasol' | 'bench' | 'planter' | 'hedge' | 'lamp' | 'statue';
+export type DecorKind = 'parasol' | 'bench' | 'planter' | 'hedge' | 'lamp' | 'statue' | 'fountain';
 export type BuildKind = StallKind | DecorKind;
 
 export interface StallDef {
@@ -26,6 +26,7 @@ export const DECORS: Record<DecorKind, DecorDef> = {
   hedge:   { kind: 'hedge',   name: '生垣', icon: '🌳', cost: 40, attract: 0.04, unlockAt: 0 },
   lamp:    { kind: 'lamp',    name: '街灯', icon: '🏮', cost: 90, attract: 0.08, unlockAt: 600 },
   statue:  { kind: 'statue',  name: '記念像', icon: '🗽', cost: 400, attract: 0.25, unlockAt: 1200 },
+  fountain:{ kind: 'fountain',name: '噴水', icon: '⛲', cost: 900, attract: 0.4, unlockAt: 3000 },
 };
 export const isStallKind = (k: BuildKind): k is StallKind => k in STALLS;
 
@@ -61,6 +62,8 @@ export const GOALS: Goal[] = [
   { id: 'serve100',text: 'お客さん 100 人に販売',   reward: 300, done: (s) => s.served >= 100 },
   { id: 'rev2000', text: '売上 2000 を達成',       reward: 400, done: (s) => s.revenue >= 2000 },
   { id: 'statue',  text: '記念像を建てる',          reward: 600, done: (s) => s.decors.some((d) => d.kind === 'statue') },
+  { id: 'tier2',   text: '露店を Lv5 にして豪華にする', reward: 700, done: (s) => s.stalls.some((t) => t.stockLevel + t.speedLevel >= 5) },
+  { id: 'fountain',text: '噴水を建てる',            reward: 1200, done: (s) => s.decors.some((d) => d.kind === 'fountain') },
   { id: 'rev5000', text: '売上 5000 を達成',       reward: 800, done: (s) => s.revenue >= 5000 },
   { id: 'kinds4',  text: '4 種類の露店をそろえる',  reward: 600, done: (s) => new Set(s.stalls.map((t) => t.kind)).size >= 4 },
   { id: 'serve500',text: 'お客さん 500 人に販売',   reward: 800, done: (s) => s.served >= 500 },
@@ -85,6 +88,8 @@ export function incomePerSecond(st: GameState): number {
   return Math.min(spawnRate(st), capacity) * avgPrice * 0.5;  // 50% efficiency while away
 }
 
+/** Visual tier 0..2 from total upgrade level (3 → tier 1, 5 → tier 2). */
+export const stallTier = (s: Stall) => { const lv = s.stockLevel + s.speedLevel; return lv >= 5 ? 2 : lv >= 3 ? 1 : 0; };
 export const stallPrice = (s: Stall) => STALLS[s.kind].price + s.stockLevel * 3;
 export const stallService = (s: Stall) => Math.max(0.8, STALLS[s.kind].serviceTime - s.speedLevel * 0.3);
 export const upgradeCost = (s: Stall, which: 'stock' | 'speed') =>
