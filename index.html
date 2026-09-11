@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Market Square Tycoon</title>
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body>
+  <canvas id="game"></canvas>
+  <div id="hud">
+    <div id="topbar">
+      <span class="stat">💰 <b id="money">0</b></span>
+      <span class="stat">📈 売上 <b id="revenue">0</b></span>
+      <span class="stat">🧍 客 <b id="customers">0</b></span>
+      <button id="reset" title="セーブを消して最初から">↺</button>
+    </div>
+    <div id="toast"></div>
+    <div id="panel" hidden></div>
+    <div id="build"></div>
+  </div>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
