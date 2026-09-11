@@ -9,6 +9,7 @@ export interface HudCallbacks {
   onRemove(stall: Stall): void;
   onRemoveDecor(decor: Decor): void;
   onMove(id: number): void;
+  onRotate(decor: Decor): void;
   onReset(): void;
 }
 
@@ -74,6 +75,30 @@ export class Hud {
     setTimeout(() => el.remove(), 2600);
   }
 
+  /** Currently open prop id (stall or decor), for anchoring the panel in world space. */
+  get openId(): number | null { return this.openStall?.id ?? this.openDecor?.id ?? null; }
+
+  /** Place the panel next to a screen point (top-right of the object), clamped to the viewport. */
+  anchorPanel(x: number, y: number) {
+    const panel = $('panel');
+    if (panel.hidden) return;
+    const w = panel.offsetWidth, h = panel.offsetHeight;
+    const mobile = window.innerWidth < 600;
+    if (mobile) { panel.style.left = ''; panel.style.top = ''; return; } // CSS bottom sheet on phones
+    const left = Math.min(Math.max(8, x + 28), window.innerWidth - w - 8);
+    const top = Math.min(Math.max(56, y - h - 16), window.innerHeight - h - 100);
+    panel.style.left = `${left}px`; panel.style.top = `${top}px`; panel.style.right = 'auto';
+  }
+
+  /** Floating text that rises and fades at a screen position (level-ups, rewards). */
+  float(text: string, x: number, y: number, cls = '') {
+    const el = document.createElement('div');
+    el.className = `float ${cls}`; el.textContent = text;
+    el.style.left = `${x}px`; el.style.top = `${y}px`;
+    document.getElementById('hud')!.appendChild(el);
+    setTimeout(() => el.remove(), 1400);
+  }
+
   showStall(stall: Stall) { this.openDecor = null; this.openStall = stall; this.renderPanel(stall); $('panel').hidden = false; }
   showDecor(decor: Decor) { this.openStall = null; this.openDecor = decor; this.renderDecorPanel(decor); $('panel').hidden = false; }
   closePanel() { this.openStall = null; this.openDecor = null; $('panel').hidden = true; }
@@ -85,12 +110,14 @@ export class Hud {
     panel.innerHTML = `
       <h3>${def.icon} ${def.name}</h3>
       <div class="row"><span>集客ボーナス</span><b>+${Math.round(def.attract * 100)}%</b></div>
-      <div class="row"><button data-a="move">↔ 移動</button><button data-a="close">閉じる</button><button data-a="remove" class="danger">撤去 (+${Math.floor(def.cost / 2)})</button></div>`;
+      <div class="row"><button data-a="rotate">⟳ 回転</button><button data-a="move">↔ 移動</button><button data-a="remove" class="danger">撤去 (+${Math.floor(def.cost / 2)})</button></div>
+      <div class="row"><button data-a="close">閉じる</button></div>`;
     panel.querySelectorAll<HTMLButtonElement>('button').forEach((b) => b.addEventListener('click', () => {
       const a = b.dataset.a;
       if (a === 'close') this.closePanel();
       else if (a === 'remove') { this.cb.onRemoveDecor(d); this.closePanel(); }
       else if (a === 'move') { this.cb.onMove(d.id); this.closePanel(); }
+      else if (a === 'rotate') this.cb.onRotate(d);
     }));
   }
 

@@ -31,16 +31,33 @@ function blockedCells(): Set<string> {
   return s;
 }
 
-function addPropMesh(id: number, kind: BuildKind, cell: Cell) {
+function toScreen(world: THREE.Vector3): [number, number] {
+  const v = world.clone().project(rig.camera);
+  return [(v.x + 1) / 2 * window.innerWidth, (1 - v.y) / 2 * window.innerHeight];
+}
+function propScreenPos(id: number, height = 2.2): [number, number] | null {
+  const m = propMeshes.get(id);
+  return m ? toScreen(m.position.clone().add(new THREE.Vector3(0, height, 0))) : null;
+}
+
+function anchorOpen() {
+  const id = hud.openId;
+  if (id === null) return;
+  const p = propScreenPos(id, 1.6);
+  if (p) hud.anchorPanel(p[0], p[1]);
+}
+
+function addPropMesh(id: number, kind: BuildKind, cell: Cell, rot = 0) {
   const g = buildProp(kind);
   const [x, z] = cellToWorld(cell);
   g.position.set(x, 0, z);
+  g.rotation.y = rot * Math.PI / 2;
   g.traverse((o) => { o.userData.propId = id; });
   propRoot.add(g);
   propMeshes.set(id, g);
 }
 for (const st of state.stalls) addPropMesh(st.id, st.kind, st.cell);
-for (const d of state.decors) addPropMesh(d.id, d.kind, d.cell);
+for (const d of state.decors) addPropMesh(d.id, d.kind, d.cell, d.rot ?? 0);
 
 // --- coin pop effect ------------------------------------------------------
 const pops: { m: THREE.Mesh; life: number }[] = [];
@@ -55,6 +72,10 @@ function coinPop(at: THREE.Vector3, angry = false) {
   rig.scene.add(m);
   pops.push({ m, life: 0.8 });
 }
+
+// squash-and-stretch hop for a prop
+const hops: { m: THREE.Object3D; t: number }[] = [];
+function hop(m: THREE.Object3D) { if (!hops.some((h) => h.m === m)) hops.push({ m, t: 0 }); }
 
 // --- systems --------------------------------------------------------------
 const customers = new CustomerSystem(rig.scene, state, blockedCells, {
@@ -84,7 +105,21 @@ const hud = new Hud(state, {
     if (state.money < cost) return;
     state.money -= cost;
     if (which === 'stock') stall.stockLevel++; else stall.speedLevel++;
-    sfx.place(); dirty = true; hud.refresh(); checkGoals();
+    sfx.unlock(); dirty = true; hud.refresh(); checkGoals();
+    // celebration: burst of coins + floating label + a little hop
+    const m = propMeshes.get(stall.id);
+    if (m) {
+      for (let i = 0; i < 8; i++) coinPop(m.position.clone().add(new THREE.Vector3((Math.random() - 0.5) * 1.6, Math.random() * 0.6, (Math.random() - 0.5) * 1.6)));
+      hop(m);
+      const p = propScreenPos(stall.id, 2.8);
+      if (p) hud.float(`⬆ レベルアップ！ Lv${stall.stockLevel + stall.speedLevel}`, p[0], p[1], 'big');
+    }
+  },
+  onRotate: (d) => {
+    d.rot = ((d.rot ?? 0) + 1) % 4;
+    const m = propMeshes.get(d.id);
+    if (m) m.rotation.y = d.rot * Math.PI / 2;
+    sfx.place(); dirty = true;
   },
   onRemove: (stall) => {
     state.money += Math.floor(STALLS[stall.kind].cost / 2);
@@ -113,6 +148,7 @@ function checkGoals() {
     state.goalsDone.push(g.id);
     state.money += g.reward;
     hud.toast(`🎯 目標達成「${g.text}」 +${g.reward}`);
+    hud.float(`+${g.reward}`, window.innerWidth / 2, 130, 'money');
     sfx.goal();
     dirty = true; hud.refresh();
     checkGoals(); // several goals may complete at once
@@ -288,6 +324,7 @@ canvas.addEventListener('pointerup', (e) => {
     const s = state.stalls.find((t) => t.id === propHit);
     const d = state.decors.find((t) => t.id === propHit);
     if (s) hud.showStall(s); else if (d) hud.showDecor(d);
+    anchorOpen();
     return;
   }
   if (movingId !== null) {
@@ -323,6 +360,14 @@ function frame() {
     p.life -= dt; p.m.position.y += dt * 1.5; p.m.rotation.z += dt * 6;
     if (p.life <= 0) { rig.scene.remove(p.m); pops.splice(pops.indexOf(p), 1); }
   }
+  for (const h of [...hops]) {
+    h.t += dt * 3;
+    const s = 1 + Math.sin(Math.min(h.t, 1) * Math.PI) * 0.18;
+    h.m.scale.set(1 / Math.sqrt(s), s, 1 / Math.sqrt(s));
+    if (h.t >= 1) { h.m.scale.set(1, 1, 1); hops.splice(hops.indexOf(h), 1); }
+  }
+  // keep the detail panel next to its object while the camera moves
+  anchorOpen();
 
   saveTimer += dt;
   if (dirty && saveTimer > 2) { save(state); dirty = false; saveTimer = 0; }

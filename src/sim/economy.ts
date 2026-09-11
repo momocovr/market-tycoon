@@ -36,7 +36,7 @@ export interface Stall {
   sold: number;
   busyUntil: number;   // sim time when current customer is done
 }
-export interface Decor { id: number; kind: DecorKind; cell: Cell }
+export interface Decor { id: number; kind: DecorKind; cell: Cell; rot?: number /* 0..3 quarter turns */ }
 
 export interface GameState {
   money: number; revenue: number; served: number; lost: number;

@@ -45,7 +45,7 @@ button.selected { background: var(--orange); color: #fff; border-color: #c96a12;
 body.building #game { cursor: copy; }
 
 #panel {
-  position: absolute; right: 10px; top: 60px; width: 230px;
+  position: absolute; right: 10px; top: 60px; width: 230px; transition: left .12s, top .12s;
   background: var(--panel); border: 3px solid var(--orange); border-radius: 16px;
   padding: 12px; font-size: 14px; box-shadow: 0 4px 0 rgba(0,0,0,.15);
 }
@@ -66,8 +66,25 @@ body.building #game { cursor: copy; }
 
 @media (max-width: 600px) {
   .stat { font-size: 13px; padding: 5px 9px; }
-  #panel { width: calc(100% - 20px); top: auto; bottom: 96px; }
+  #panel { width: calc(100% - 20px); top: auto !important; left: 10px !important; right: 10px; bottom: 96px; }
 }
+
+.float {
+  position: absolute; transform: translate(-50%, -100%); pointer-events: none;
+  font-weight: 900; font-size: 20px; color: var(--orange);
+  text-shadow: 0 2px 0 #fff, 0 0 8px #fff; white-space: nowrap;
+  animation: floatUp 1.4s ease-out forwards;
+}
+.float.big { font-size: 28px; color: #e45b4f; }
+.float.money { color: #2e8a7d; font-size: 16px; }
+@keyframes floatUp {
+  0% { opacity: 0; transform: translate(-50%, -80%) scale(.6); }
+  15% { opacity: 1; transform: translate(-50%, -110%) scale(1.15); }
+  30% { transform: translate(-50%, -120%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -260%) scale(1); }
+}
+.pulse { animation: pulse .5s ease-out; }
+@keyframes pulse { 0% { transform: scale(1) } 40% { transform: scale(1.18) } 100% { transform: scale(1) } }
 
 #loading {
   position: fixed; inset: 0; display: grid; place-items: center; z-index: 10;
