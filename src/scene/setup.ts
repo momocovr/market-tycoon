@@ -11,6 +11,8 @@ export interface SceneRig {
   pickGround(clientX: number, clientY: number): THREE.Vector3 | null;
   raycaster: THREE.Raycaster;
   ndc(clientX: number, clientY: number): THREE.Vector2;
+  /** Disable camera panning (while dragging a prop). */
+  setPanEnabled(on: boolean): void;
 }
 
 const ISO_X = -35.264 * (Math.PI / 180);
@@ -61,13 +63,13 @@ export function createScene(canvas: HTMLCanvasElement): SceneRig {
   scene.add(sun);
 
   // Pan (drag) & zoom (wheel / pinch). Clicks are handled by main.ts via the returned helpers.
-  let dragging = false; let lastX = 0; let lastY = 0;
+  let dragging = false; let lastX = 0; let lastY = 0; let panEnabled = true;
   const panRight = new THREE.Vector3(1, 0, -1).normalize();
   const panFwd = new THREE.Vector3(-1, 0, -1).normalize();
   canvas.addEventListener('pointerdown', (e) => { dragging = true; lastX = e.clientX; lastY = e.clientY; });
   window.addEventListener('pointerup', () => { dragging = false; });
   canvas.addEventListener('pointermove', (e) => {
-    if (!dragging || !(e.buttons & 1 || e.buttons & 4 || e.pointerType === 'touch')) return;
+    if (!dragging || !panEnabled || !(e.buttons & 1 || e.buttons & 4 || e.pointerType === 'touch')) return;
     const dx = e.clientX - lastX, dy = e.clientY - lastY;
     lastX = e.clientX; lastY = e.clientY;
     const k = (zoom * 2) / window.innerHeight;
@@ -98,6 +100,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneRig {
 
   return {
     renderer, scene, camera, raycaster, ndc,
+    setPanEnabled(on) { panEnabled = on; if (!on) dragging = false; },
     update() { renderer.render(scene, camera); },
     pickGround(x, y) {
       raycaster.setFromCamera(ndc(x, y), camera);

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { createScene } from './scene/setup';
 import { buildGround, buildGhost, buildProp } from './world/props';
-import { cellToWorld, worldToCell, inBounds, key, findPath, ENTRANCE, EXIT, type Cell } from './world/grid';
+import { cellToWorld, worldToCell, inBounds, key, findPath, ENTRANCE, EXIT, GRID_H, type Cell } from './world/grid';
 import { CustomerSystem } from './sim/customers';
 import { STALLS, DECORS, isStallKind, isUnlocked, buildCost, spawnRate, upgradeCost, currentGoal, incomePerSecond, type BuildKind, type Stall, type Decor } from './sim/economy';
 import { sfx } from './ui/sfx';
@@ -137,9 +137,16 @@ function findProp(id: number): Stall | Decor | undefined {
   return state.stalls.find((s) => s.id === id) ?? state.decors.find((d) => d.id === id);
 }
 
-function canPlace(cell: Cell, ignoreId: number | null = null): string | null {
+function kindOf(id: number | null, fallback: BuildKind | null): BuildKind | null {
+  if (id === null) return fallback;
+  return findProp(id)?.kind ?? fallback;
+}
+
+function canPlace(cell: Cell, ignoreId: number | null = null, kind: BuildKind | null = selectedBuild): string | null {
   if (!inBounds(cell)) return null;
   const k = key(cell);
+  const kk = kindOf(ignoreId, kind);
+  if (kk && isStallKind(kk) && cell.z === GRID_H - 1) return '一番手前の列は行列が作れません';
   if (k === key(ENTRANCE) || k === key(EXIT)) return '入口と出口には置けません';
   const blocked = blockedCells();
   if (ignoreId !== null) { const p = findProp(ignoreId); if (p) blocked.delete(key(p.cell)); }
@@ -192,8 +199,70 @@ function place(kind: BuildKind, cell: Cell) {
 }
 
 let downX = 0, downY = 0;
-canvas.addEventListener('pointerdown', (e) => { downX = e.clientX; downY = e.clientY; });
+// long-press on a prop → pick it up and drag it to a new tile
+const LONG_PRESS_MS = 380;
+let pressTimer: number | null = null;
+let dragId: number | null = null;       // prop currently being dragged
+let dragOrigin: Cell | null = null;
+
+function propAt(clientX: number, clientY: number): number | undefined {
+  rig.raycaster.setFromCamera(rig.ndc(clientX, clientY), rig.camera);
+  return rig.raycaster.intersectObjects(propRoot.children, true)[0]?.object.userData.propId as number | undefined;
+}
+function beginDrag(id: number) {
+  const p = findProp(id); const m = propMeshes.get(id);
+  if (!p || !m) return;
+  hud.select(null); stopMove(); hud.closePanel();
+  dragId = id; dragOrigin = { ...p.cell };
+  m.position.y = 0.6;
+  rig.setPanEnabled(false);
+  sfx.place();
+  if (navigator.vibrate) navigator.vibrate(15);
+}
+function dragTo(clientX: number, clientY: number) {
+  if (dragId === null) return;
+  const m = propMeshes.get(dragId); if (!m) return;
+  const hit = rig.pickGround(clientX, clientY); if (!hit) return;
+  const cell = worldToCell(hit.x, hit.z);
+  const err = canPlace(cell, dragId);
+  if (err === null) { ghost.visible = false; return; }
+  const [x, z] = cellToWorld(cell);
+  m.position.set(x, 0.6, z);
+  ghost.visible = true; ghost.position.set(x, 0.05, z);
+  (ghost.material as THREE.MeshBasicMaterial).color.setHex(err ? PALETTE.red : PALETTE.teal);
+}
+function endDrag(clientX: number, clientY: number) {
+  if (dragId === null) return;
+  const id = dragId; const p = findProp(id); const m = propMeshes.get(id);
+  dragId = null; ghost.visible = false; rig.setPanEnabled(true);
+  if (!p || !m || !dragOrigin) return;
+  const hit = rig.pickGround(clientX, clientY);
+  const cell = hit ? worldToCell(hit.x, hit.z) : null;
+  const err = cell ? canPlace(cell, id) : null;
+  if (cell && err === '') {
+    if (key(cell) !== key(dragOrigin)) { p.cell = cell; customers.replanAll(); sfx.place(); dirty = true; hud.refresh(); }
+  } else {
+    if (err) { hud.toast(err); sfx.deny(); }
+    p.cell = dragOrigin;
+  }
+  const [x, z] = cellToWorld(p.cell);
+  m.position.set(x, 0, z);
+  dragOrigin = null;
+}
+function cancelPress() { if (pressTimer !== null) { clearTimeout(pressTimer); pressTimer = null; } }
+
+canvas.addEventListener('pointerdown', (e) => {
+  downX = e.clientX; downY = e.clientY;
+  cancelPress();
+  if (selectedBuild || movingId !== null) return;
+  const id = propAt(e.clientX, e.clientY);
+  if (id !== undefined) pressTimer = window.setTimeout(() => { pressTimer = null; beginDrag(id); }, LONG_PRESS_MS);
+});
+window.addEventListener('pointerup', (e) => { cancelPress(); endDrag(e.clientX, e.clientY); });
+window.addEventListener('pointercancel', () => { cancelPress(); if (dragId !== null && dragOrigin) endDrag(-1, -1); });
 canvas.addEventListener('pointermove', (e) => {
+  if (pressTimer !== null && Math.hypot(e.clientX - downX, e.clientY - downY) > 8) cancelPress();
+  if (dragId !== null) { dragTo(e.clientX, e.clientY); return; }
   if (!selectedBuild && movingId === null) { ghost.visible = false; return; }
   const hit = rig.pickGround(e.clientX, e.clientY);
   if (!hit) { ghost.visible = false; return; }
@@ -206,6 +275,7 @@ canvas.addEventListener('pointermove', (e) => {
   (ghost.material as THREE.MeshBasicMaterial).color.setHex(err ? PALETTE.red : PALETTE.teal);
 });
 canvas.addEventListener('pointerup', (e) => {
+  if (dragId !== null) return; // release after a long-press drag (window handler drops it)
   if (Math.hypot(e.clientX - downX, e.clientY - downY) > 8) return; // it was a drag/pan
   const hit = rig.pickGround(e.clientX, e.clientY);
   if (!hit) return;
@@ -264,4 +334,4 @@ frame();
 window.addEventListener('beforeunload', () => save(state));
 
 // debug handle (dev only)
-if (import.meta.env.DEV) Object.assign(window, { __state: state, __customers: customers });
+if (import.meta.env.DEV) Object.assign(window, { __state: state, __customers: customers, __rig: rig, __propMeshes: propMeshes });
