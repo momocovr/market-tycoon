@@ -6,7 +6,7 @@ import { stallPrice, stallService, type GameState, type Stall, type StallKind } 
 type Phase = 'toQueue' | 'queue' | 'leaving';
 
 interface Customer {
-  mesh: THREE.Group;
+  mesh: THREE.Object3D;
   cell: Cell;
   path: Cell[];
   t: number;            // 0..1 progress to path[0]

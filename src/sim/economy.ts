@@ -1,7 +1,7 @@
 import type { Cell } from '../world/grid';
 
 export type StallKind = 'vegetable' | 'bakery' | 'cafe' | 'flower';
-export type DecorKind = 'parasol' | 'bench' | 'planter' | 'hedge' | 'lamp';
+export type DecorKind = 'parasol' | 'bench' | 'planter' | 'hedge' | 'lamp' | 'statue';
 export type BuildKind = StallKind | DecorKind;
 
 export interface StallDef {
@@ -25,6 +25,7 @@ export const DECORS: Record<DecorKind, DecorDef> = {
   parasol: { kind: 'parasol', name: 'パラソル席', icon: '⛱️', cost: 120, attract: 0.12, unlockAt: 400 },
   hedge:   { kind: 'hedge',   name: '生垣', icon: '🌳', cost: 40, attract: 0.04, unlockAt: 0 },
   lamp:    { kind: 'lamp',    name: '街灯', icon: '🏮', cost: 90, attract: 0.08, unlockAt: 600 },
+  statue:  { kind: 'statue',  name: '記念像', icon: '🗽', cost: 400, attract: 0.25, unlockAt: 1200 },
 };
 export const isStallKind = (k: BuildKind): k is StallKind => k in STALLS;
 

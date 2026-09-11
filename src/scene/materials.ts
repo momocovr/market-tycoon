@@ -41,3 +41,10 @@ export function toon(color: number | PaletteKey): THREE.MeshToonMaterial {
   }
   return m;
 }
+
+let vertexMat: THREE.MeshToonMaterial | null = null;
+/** Shared toon material that reads per-vertex colours (Blender-exported props). */
+export function toonVertex(): THREE.MeshToonMaterial {
+  if (!vertexMat) vertexMat = new THREE.MeshToonMaterial({ vertexColors: true, gradientMap });
+  return vertexMat;
+}

@@ -8,13 +8,15 @@
 - [x] 露店4種・装飾5種の配置（プリミティブ仮アセット）、通路ブロック判定
 - [x] NPC 客: 出現 → A* → 行列 → 購入 → 退場、コイン演出
 - [x] HUD、露店パネル（アップグレード/撤去）、アンロック通知、localStorage 保存
-- [ ] 初デプロイ → `/explain-usage` で実測
+- [x] 初デプロイ → `/explain-usage` で実測（約300万トークン効果換算 / 107ターン）
 
-## Phase 2 — Blender MCP アセット
-- [ ] パレットテクスチャ 256×256
-- [ ] prop_kiosk_{vegetable,bakery,cafe,flower}, deco_parasol, deco_bench, deco_planter, deco_hedge, deco_lamp, deco_statue
-- [ ] GLB 一括書き出しスクリプト、gltf-transform、props.ts を GLB 読み込みに置換
-- [ ] キャラ: Quaternius CC0 GLB（ダウンロードはユーザー承認が必要）
+## Phase 2 — Blender MCP アセット ✅ 2026-09-11
+- [x] 配色は頂点カラー（テクスチャ不要、UV 不要）。blender/build_props.py が唯一のソース
+- [x] prop_kiosk_{vegetable,bakery,cafe,flower}, deco_{parasol,bench,planter,hedge,lamp,statue}
+- [x] GLB 書き出し（public/models/props.glb 約500KB）、src/assets/loader.ts で読み込み。GLB が無ければプリミティブにフォールバック
+- [x] キャラ: 自作ローポリ 6 色（char_customer_0..5）。Quaternius 流用は歩行アニメが欲しくなった時点で再検討
+- [ ] 歩行アニメ（今は上下バウンドのみ）
+- [ ] gltf-transform 圧縮（現状 500KB なので保留）
 
 ## Phase 3 — 経営ロジック拡張
 - [ ] 客の満足度（待ち時間で離脱）、装飾の配置ボーナス

@@ -64,3 +64,8 @@ button.selected { background: var(--orange); color: #fff; border-color: #c96a12;
   .stat { font-size: 13px; padding: 5px 9px; }
   #panel { width: calc(100% - 20px); top: auto; bottom: 96px; }
 }
+
+#loading {
+  position: fixed; inset: 0; display: grid; place-items: center; z-index: 10;
+  background: #bfe6f5; color: var(--ink); font-size: 22px; font-weight: 700;
+}

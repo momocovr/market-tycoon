@@ -3,6 +3,7 @@ import { toon, PALETTE } from '../scene/materials';
 import type { BuildKind, DecorKind, StallKind } from '../sim/economy';
 import { isStallKind } from '../sim/economy';
 import { TILE, GRID_W, GRID_H } from './grid';
+import { instantiate } from '../assets/loader';
 
 /** Phase 1 placeholder props built from primitives. Replaced by Blender GLBs in Phase 2. */
 
@@ -81,6 +82,12 @@ export function buildDecor(kind: DecorKind): THREE.Group {
       g.add(mesh(new THREE.BoxGeometry(1.5, 0.2, 0.7), 'grass', 0.95));
       break;
     }
+    case 'statue': {
+      g.add(mesh(new THREE.CylinderGeometry(1, 1, 0.15, 12), 'grass', 0.07));
+      g.add(mesh(new THREE.BoxGeometry(0.5, 0.7, 0.5), 'white', 0.55));
+      g.add(mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.9, 8), 'white', 1.35));
+      break;
+    }
     case 'lamp': {
       g.add(mesh(new THREE.CylinderGeometry(0.16, 0.22, 0.3, 8), 'teal', 0.15));
       g.add(mesh(new THREE.CylinderGeometry(0.05, 0.07, 2.6, 8), 'teal', 1.45));
@@ -92,13 +99,17 @@ export function buildDecor(kind: DecorKind): THREE.Group {
   return g;
 }
 
-export function buildProp(kind: BuildKind): THREE.Group {
+export function buildProp(kind: BuildKind): THREE.Object3D {
+  const glb = instantiate(isStallKind(kind) ? `prop_kiosk_${kind}` : `deco_${kind}`);
+  if (glb) return glb;
   return isStallKind(kind) ? buildStall(kind) : buildDecor(kind);
 }
 
 const SHIRTS = [PALETTE.teal, PALETTE.orange, PALETTE.red, PALETTE.yellow, PALETTE.hedge, 0x6f8fd6];
 
-export function buildCustomer(): THREE.Group {
+export function buildCustomer(): THREE.Object3D {
+  const glb = instantiate(`char_customer_${Math.floor(Math.random() * 6)}`);
+  if (glb) return glb;
   const g = new THREE.Group();
   const shirt = SHIRTS[Math.floor(Math.random() * SHIRTS.length)];
   g.add(mesh(new THREE.CapsuleGeometry(0.22, 0.45, 4, 8), shirt, 0.55));

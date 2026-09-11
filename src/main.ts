@@ -7,6 +7,10 @@ import { STALLS, DECORS, isStallKind, isUnlocked, buildCost, spawnRate, upgradeC
 import { Hud } from './ui/hud';
 import { load, save, clear } from './save/save';
 import { PALETTE } from './scene/materials';
+import { loadProps } from './assets/loader';
+
+await loadProps().catch((e) => console.warn('props.glb not loaded, using primitives', e));
+document.getElementById('loading')?.remove();
 
 const canvas = document.getElementById('game') as HTMLCanvasElement;
 const rig = createScene(canvas);
@@ -15,7 +19,7 @@ rig.scene.add(buildGround());
 let state = load();
 
 // --- placed objects -------------------------------------------------------
-const propMeshes = new Map<number, THREE.Group>(); // id → mesh (stalls & decors)
+const propMeshes = new Map<number, THREE.Object3D>(); // id → mesh (stalls & decors)
 const propRoot = new THREE.Group();
 rig.scene.add(propRoot);
 
