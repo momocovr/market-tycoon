@@ -1,4 +1,5 @@
-import { STALLS, DECORS, isUnlocked, buildCost, stallPrice, stallService, upgradeCost, type BuildKind, type GameState, type Stall } from '../sim/economy';
+import { STALLS, DECORS, isUnlocked, buildCost, stallPrice, stallService, upgradeCost, currentGoal, type BuildKind, type GameState, type Stall } from '../sim/economy';
+import { sfx } from './sfx';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -26,6 +27,7 @@ export class Hud {
       this.buttons.set(kind, b);
     }
     $('reset').addEventListener('click', () => { if (confirm('セーブを消して最初からにしますか？')) cb.onReset(); });
+    $('mute').addEventListener('click', () => { $('mute').textContent = sfx.toggleMute() ? '🔇' : '🔊'; });
     window.addEventListener('keydown', (e) => { if (e.key === 'Escape') { this.select(null); this.closePanel(); } });
     this.refresh();
   }
@@ -40,6 +42,8 @@ export class Hud {
   refresh() {
     $('money').textContent = String(Math.floor(this.state.money));
     $('revenue').textContent = String(Math.floor(this.state.revenue));
+    const g = currentGoal(this.state);
+    $('goaltext').textContent = g ? `${g.text}（+${g.reward}）` : '全目標達成！';
     this.buttons.forEach((b, kind) => {
       const unlocked = isUnlocked(kind, this.state);
       b.disabled = !unlocked || this.state.money < buildCost(kind);

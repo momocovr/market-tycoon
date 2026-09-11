@@ -39,11 +39,40 @@ export interface Stall {
 export interface Decor { id: number; kind: DecorKind; cell: Cell }
 
 export interface GameState {
-  money: number; revenue: number; served: number;
+  money: number; revenue: number; served: number; lost: number;
   stalls: Stall[]; decors: Decor[]; nextId: number;
+  goalsDone: string[];
+  lastSeen: number;   // epoch ms of last save, for offline income
 }
 
-export const newGame = (): GameState => ({ money: 250, revenue: 0, served: 0, stalls: [], decors: [], nextId: 1 });
+export const newGame = (): GameState => ({
+  money: 250, revenue: 0, served: 0, lost: 0, stalls: [], decors: [], nextId: 1, goalsDone: [], lastSeen: 0,
+});
+
+export interface Goal { id: string; text: string; reward: number; done(st: GameState): boolean }
+export const GOALS: Goal[] = [
+  { id: 'first',   text: '露店を 1 軒置く',        reward: 60,  done: (s) => s.stalls.length >= 1 },
+  { id: 'serve10', text: 'お客さん 10 人に販売',    reward: 80,  done: (s) => s.served >= 10 },
+  { id: 'decor2',  text: '装飾を 2 つ置く',        reward: 80,  done: (s) => s.decors.length >= 2 },
+  { id: 'stalls3', text: '露店を 3 軒にする',       reward: 150, done: (s) => s.stalls.length >= 3 },
+  { id: 'rev500',  text: '売上 500 を達成',        reward: 150, done: (s) => s.revenue >= 500 },
+  { id: 'upg',     text: '露店をアップグレード',    reward: 120, done: (s) => s.stalls.some((t) => t.stockLevel + t.speedLevel > 0) },
+  { id: 'kinds3',  text: '3 種類の露店をそろえる',  reward: 250, done: (s) => new Set(s.stalls.map((t) => t.kind)).size >= 3 },
+  { id: 'serve100',text: 'お客さん 100 人に販売',   reward: 300, done: (s) => s.served >= 100 },
+  { id: 'rev2000', text: '売上 2000 を達成',       reward: 400, done: (s) => s.revenue >= 2000 },
+  { id: 'statue',  text: '記念像を建てる',          reward: 600, done: (s) => s.decors.some((d) => d.kind === 'statue') },
+  { id: 'rev5000', text: '売上 5000 を達成',       reward: 800, done: (s) => s.revenue >= 5000 },
+];
+export const currentGoal = (st: GameState) => GOALS.find((g) => !st.goalsDone.includes(g.id)) ?? null;
+
+/** Rough income per second used to settle time spent away (capped by the caller). */
+export function incomePerSecond(st: GameState): number {
+  if (!st.stalls.length) return 0;
+  const avgPrice = st.stalls.reduce((a, s) => a + stallPrice(s), 0) / st.stalls.length;
+  const avgService = st.stalls.reduce((a, s) => a + stallService(s), 0) / st.stalls.length;
+  const capacity = st.stalls.length / avgService;          // customers/s the stalls can serve
+  return Math.min(spawnRate(st), capacity) * avgPrice * 0.5;  // 50% efficiency while away
+}
 
 export const stallPrice = (s: Stall) => STALLS[s.kind].price + s.stockLevel * 3;
 export const stallService = (s: Stall) => Math.max(0.8, STALLS[s.kind].serviceTime - s.speedLevel * 0.3);

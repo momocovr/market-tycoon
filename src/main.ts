@@ -3,7 +3,8 @@ import { createScene } from './scene/setup';
 import { buildGround, buildGhost, buildProp } from './world/props';
 import { cellToWorld, worldToCell, inBounds, key, findPath, ENTRANCE, EXIT, type Cell } from './world/grid';
 import { CustomerSystem } from './sim/customers';
-import { STALLS, DECORS, isStallKind, isUnlocked, buildCost, spawnRate, upgradeCost, newGame, type BuildKind, type Stall, type Decor } from './sim/economy';
+import { STALLS, DECORS, isStallKind, isUnlocked, buildCost, spawnRate, upgradeCost, currentGoal, incomePerSecond, type BuildKind, type Stall, type Decor } from './sim/economy';
+import { sfx } from './ui/sfx';
 import { Hud } from './ui/hud';
 import { load, save, clear } from './save/save';
 import { PALETTE } from './scene/materials';
@@ -45,8 +46,10 @@ for (const d of state.decors) addPropMesh(d.id, d.kind, d.cell);
 const pops: { m: THREE.Mesh; life: number }[] = [];
 const coinGeo = new THREE.CylinderGeometry(0.18, 0.18, 0.06, 12);
 const coinMat = new THREE.MeshBasicMaterial({ color: PALETTE.yellow });
-function coinPop(at: THREE.Vector3) {
-  const m = new THREE.Mesh(coinGeo, coinMat);
+const angryGeo = new THREE.SphereGeometry(0.16, 6, 4);
+const angryMat = new THREE.MeshBasicMaterial({ color: PALETTE.red });
+function coinPop(at: THREE.Vector3, angry = false) {
+  const m = new THREE.Mesh(angry ? angryGeo : coinGeo, angry ? angryMat : coinMat);
   m.position.copy(at).add(new THREE.Vector3(0, 1.6, 0));
   m.rotation.x = Math.PI / 2;
   rig.scene.add(m);
@@ -55,7 +58,8 @@ function coinPop(at: THREE.Vector3) {
 
 // --- systems --------------------------------------------------------------
 const customers = new CustomerSystem(rig.scene, state, blockedCells, {
-  onPaid: (_stall, _amount, at) => { coinPop(at); dirty = true; hud.refresh(); checkUnlocks(); },
+  onPaid: (_stall, _amount, at) => { coinPop(at); sfx.coin(); dirty = true; hud.refresh(); checkUnlocks(); checkGoals(); },
+  onGaveUp: (at) => { coinPop(at, true); sfx.unhappy(); dirty = true; hud.refresh(); },
 });
 
 let selectedBuild: BuildKind | null = null;
@@ -71,14 +75,14 @@ const hud = new Hud(state, {
     if (state.money < cost) return;
     state.money -= cost;
     if (which === 'stock') stall.stockLevel++; else stall.speedLevel++;
-    dirty = true; hud.refresh();
+    sfx.place(); dirty = true; hud.refresh(); checkGoals();
   },
   onRemove: (stall) => {
     state.money += Math.floor(STALLS[stall.kind].cost / 2);
     state.stalls.splice(state.stalls.indexOf(stall), 1);
     customers.stallRemoved(stall.id);
     const m = propMeshes.get(stall.id); if (m) { propRoot.remove(m); propMeshes.delete(stall.id); }
-    dirty = true; hud.refresh();
+    sfx.remove(); dirty = true; hud.refresh();
   },
   onReset: () => { clear(); location.reload(); },
 });
@@ -90,11 +94,33 @@ function checkUnlocks() {
     if (isUnlocked(kind, state)) {
       unlockedSeen.add(kind);
       const def = isStallKind(kind) ? STALLS[kind] : DECORS[kind];
-      if (def.unlockAt > 0 && state.revenue > 0) hud.toast(`${def.icon} ${def.name} が解放！`);
+      if (def.unlockAt > 0 && state.revenue > 0) { hud.toast(`${def.icon} ${def.name} が解放！`); sfx.unlock(); }
     }
   }
 }
+function checkGoals() {
+  const g = currentGoal(state);
+  if (g && g.done(state)) {
+    state.goalsDone.push(g.id);
+    state.money += g.reward;
+    hud.toast(`🎯 目標達成「${g.text}」 +${g.reward}`);
+    sfx.goal();
+    dirty = true; hud.refresh();
+    checkGoals(); // several goals may complete at once
+  }
+}
+// settle income earned while the page was closed (max 2 hours, only if stalls exist)
+{
+  const away = state.lastSeen ? Math.min((Date.now() - state.lastSeen) / 1000, 7200) : 0;
+  const earned = Math.floor(away * incomePerSecond(state));
+  if (earned > 0 && away > 60) {
+    state.money += earned; state.revenue += earned;
+    hud.toast(`🏠 お留守番中の売上 +${earned}`);
+    dirty = true; hud.refresh();
+  }
+}
 checkUnlocks();
+checkGoals();
 if (state.stalls.length === 0) hud.toast('🥕 青果の露店を置いてお客さんを呼ぼう');
 
 // --- placement / picking --------------------------------------------------
@@ -122,7 +148,7 @@ function place(kind: BuildKind, cell: Cell) {
     state.decors.push(d);
   }
   addPropMesh(id, kind, cell);
-  dirty = true; hud.refresh();
+  sfx.place(); dirty = true; hud.refresh(); checkGoals();
 }
 
 let downX = 0, downY = 0;
@@ -147,7 +173,7 @@ canvas.addEventListener('pointerup', (e) => {
   if (selectedBuild) {
     const err = canPlace(cell);
     if (err === null) return;
-    if (err) { hud.toast(err); return; }
+    if (err) { hud.toast(err); sfx.deny(); return; }
     place(selectedBuild, cell);
     if (state.money < buildCost(selectedBuild)) hud.select(null);
     return;
@@ -183,7 +209,5 @@ function frame() {
 frame();
 window.addEventListener('beforeunload', () => save(state));
 
-// keep `newGame` referenced for reset-in-place later
-void newGame;
 // debug handle (dev only)
 if (import.meta.env.DEV) Object.assign(window, { __state: state, __customers: customers });

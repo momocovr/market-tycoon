@@ -16,6 +16,7 @@ export function load(): GameState {
 }
 
 export function save(st: GameState): void {
+  st.lastSeen = Date.now();
   try { localStorage.setItem(KEY, JSON.stringify(st)); } catch { /* private mode etc. */ }
 }
 

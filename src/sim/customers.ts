@@ -15,6 +15,7 @@ interface Customer {
   stallId: number;
   happy: boolean;
   bob: number;
+  patience: number;     // seconds left before giving up in the queue
 }
 
 const SPEED = 2.4; // m/s
@@ -22,6 +23,7 @@ const MAX_CUSTOMERS = 40;
 
 export interface CustomerEvents {
   onPaid(stall: Stall, amount: number, at: THREE.Vector3): void;
+  onGaveUp(at: THREE.Vector3): void;
 }
 
 export class CustomerSystem {
@@ -62,7 +64,7 @@ export class CustomerSystem {
     const [x, z] = cellToWorld(ENTRANCE);
     mesh.position.set(x, 0, z);
     this.scene.add(mesh);
-    const c: Customer = { mesh, cell: { ...ENTRANCE }, path: [], t: 0, phase: 'toQueue', want: target.kind, stallId: target.id, happy: true, bob: Math.random() * 6 };
+    const c: Customer = { mesh, cell: { ...ENTRANCE }, path: [], t: 0, phase: 'toQueue', want: target.kind, stallId: target.id, happy: true, bob: Math.random() * 6, patience: 14 + Math.random() * 10 };
     this.customers.push(c);
     this.joinQueue(c, target);
   }
@@ -137,7 +139,11 @@ export class CustomerSystem {
     c.phase = 'queue';
     // face the stall
     c.mesh.rotation.y = Math.PI;
-    if (idx !== 0) return;
+    if (idx !== 0) {
+      c.patience -= dt;
+      if (c.patience <= 0) { this.state.lost++; this.ev.onGaveUp(c.mesh.position.clone()); this.leave(c, false); }
+      return;
+    }
 
     if (stall.busyUntil === 0) { stall.busyUntil = this.time + stallService(stall); return; }
     if (this.time >= stall.busyUntil) {
