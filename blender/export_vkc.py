@@ -53,29 +53,40 @@ def cell_uv(name):
     return u, v
 
 
+def write_png(path, w, h, rgb_rows):
+    """Minimal 8-bit RGB PNG writer (no PIL in Blender's Python)."""
+    import struct, zlib
+    def chunk(tag, data):
+        c = struct.pack(">I", len(data)) + tag + data
+        return c + struct.pack(">I", zlib.crc32(tag + data) & 0xFFFFFFFF)
+    filt = bytes([0])
+    raw = b"".join(filt + bytes(row) for row in rgb_rows)
+    sig = bytes([137, 80, 78, 71, 13, 10, 26, 10])
+    png = sig + chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 2, 0, 0, 0))
+    png += chunk(b"IDAT", zlib.compress(raw, 9)) + chunk(b"IEND", b"")
+    with open(path, "wb") as f:
+        f.write(png)
+
+
 def make_palette_image():
     w, h = COLS * CELL, ROWS * CELL
-    img = bpy.data.images.get("MP_PaletteTex")
-    if img is None or img.size[0] != w or img.size[1] != h:
-        if img:
-            bpy.data.images.remove(img)
-        img = bpy.data.images.new("MP_PaletteTex", w, h, alpha=False)
-    px = [0.0] * (w * h * 4)
-    for i, n in enumerate(NAMES):
-        cx, cy = i % COLS, i // COLS
-        hx = HEX[n]
-        r, g, b = ((hx >> 16) & 255) / 255, ((hx >> 8) & 255) / 255, (hx & 255) / 255
-        # rows from top: pixel row index counts from bottom in Blender
-        for y in range(h - (cy + 1) * CELL, h - cy * CELL):
-            for x in range(cx * CELL, (cx + 1) * CELL):
-                o = (y * w + x) * 4
-                # image.pixels expects linear values for sRGB-tagged 8-bit? Blender converts on save; write sRGB.
-                px[o:o + 4] = (r, g, b, 1.0)
-    img.pixels = px
-    img.filepath_raw = PALETTE_PNG
-    img.file_format = "PNG"
+    rows = []
+    for y in range(h):                       # PNG rows go top → bottom
+        cy = y // CELL
+        row = []
+        for x in range(w):
+            i = cy * COLS + x // CELL
+            hx = HEX[NAMES[i]] if i < len(NAMES) else 0x000000
+            row += [(hx >> 16) & 255, (hx >> 8) & 255, hx & 255]
+        rows.append(row)
+    os.makedirs(OUT_DIR, exist_ok=True)
+    write_png(PALETTE_PNG, w, h, rows)
+    old = bpy.data.images.get("MP_PaletteTex")
+    if old:
+        bpy.data.images.remove(old)
+    img = bpy.data.images.load(PALETTE_PNG)
+    img.name = "MP_PaletteTex"
     img.colorspace_settings.name = "sRGB"
-    img.save()
     return img
 
 

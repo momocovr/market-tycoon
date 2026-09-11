@@ -23,11 +23,11 @@
 ## フェーズ
 | # | 内容 | 状態 |
 |---|---|---|
-| V0 | Unity プロジェクト生成、SDK 導入、SDK 型情報のダンプ（コンポーネント名・フィールド） | 進行中 |
-| V1 | Blender: パレットテクスチャ焼き込み + FBX 書き出し（props / characters） | |
-| V2 | エディタスクリプトでシーン構築（Setting Base / Spawn / Camera / 地面 Field / 雛形 Object 群 / Audio / Attribute Script） | |
-| V3 | HeliScript: グリッド・A*・経済・客 FSM・保存・HUD | |
-| V4 | Build and Run（ローカル）で動作確認、調整 | |
+| V0 | Unity プロジェクト生成、SDK 導入、SDK 型情報のダンプ（コンポーネント名・フィールド） | ✅ |
+| V1 | Blender: パレットテクスチャ焼き込み + 個別 GLB 書き出し（VKC Item Object は glb 直読み可） | ✅ blender/export_vkc.py |
+| V2 | エディタスクリプトでシーン構築（Assets/Editor/MarketTycoonSceneBuilder.cs） | ✅ |
+| V3 | HeliScript: グリッド・A*・経済・客 FSM・保存・HUD（Assets/MarketTycoon/HeliScripts/MarketTycoon.hs） | ✅ コンパイル通過 |
+| V4 | ローカルビルド（SdkBuildRunner.Run をバッチ実行）→ release/ を http.server で配信 → ブラウザ確認 | 進行中: ワールド読込 OK、入室ダイアログ手前 |
 | V5 | **ユーザーに通告 → ユーザーがログイン・非公開設定 → アップロード** | |
 
 ## リスク
@@ -35,3 +35,14 @@
 - HeliScript の list / class の制約（ジェネリック list<T>、参照渡し ref）で A* の性能
 - バッチモードで SDK の初期化ウィンドウ（ログイン案内）が邪魔をする可能性
 - 客数上限: 同時 clone 数と描画負荷（80 万 tri 上限は余裕）
+
+## V4 で分かったこと（2026-09-12）
+- ログイン無しでローカルビルド可: `Unity.exe -batchmode -projectPath D:\market_tycoon_vkc -executeMethod SdkBuildRunner.Run`（内部で BuildAndRun.ComposeProject(false)）
+- バッチでは DespawnHeightSetting.OnBuildProcessBegin が NRE → ビルド前にそのコンポーネントを一時除去
+- release/ には SDK の `PackageResources/project~/Default` の中身（heliodor_front.js 等）を追加コピーする必要があった
+- ブラウザペイン非表示だと rAF が止まる → debug.html に rAF→setTimeout の代替を注入。SkyWay CDN（廃止ドメイン）と loading-override プラグインも debug.html では外した
+- 配信は素の `python -m http.server`（自作のスレッド版サーバーだとエンジンが起動しなかった）
+- HeliScript の制約: ネストしたジェネリック不可（list<list<T>> → クラスで包む）、呼び出し側で `ref` を書かない、クラス参照同士の `===` 比較不可（id で比較）、三項演算子は避ける、クラスは使用前に定義
+- HeliScript コンパイルエラーはブラウザコンソールに `[HEL006001001] file(line): message` で出る → .hs を release/data/HeliScript に直接コピーして高速反復
+- 未解決: scene JSON の World item の components が [] のまま（HEOScript の component 登録がエクスポートに反映されない可能性）。入室後に HUD が出なければここを調査
+- 入室ダイアログ（利用規約・プライバシーポリシー同意）はユーザー承認待ち
