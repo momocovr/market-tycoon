@@ -10,13 +10,14 @@
   <div id="loading">🥕 よみこみ中…</div>
   <canvas id="game"></canvas>
   <div id="hud">
-    <div id="topbar">
-      <span class="stat">💰 <b id="money">0</b></span>
-      <span class="stat">📈 売上 <b id="revenue">0</b></span>
-      <span class="stat">🧍 客 <b id="customers">0</b></span>
-      <span class="stat" id="goal">🎯 <b id="goaltext"></b></span>
-      <button id="mute" title="効果音 ON/OFF">🔊</button>
-      <button id="reset" title="セーブを消して最初から">↺</button>
+    <div id="topleft">
+      <div class="counter money"><img class="coin" src="ui/coin.png" alt="" /><b id="money">0</b></div>
+      <div class="counter stats"><span>売上 <b id="revenue">0</b></span><span>客 <b id="customers">0</b></span></div>
+    </div>
+    <div id="mission"><span class="label">目標</span><b id="goaltext"></b></div>
+    <div id="topright">
+      <button id="mute" class="round" title="効果音 ON/OFF">🔊</button>
+      <button id="reset" class="round" title="セーブを消して最初から">↺</button>
     </div>
     <div id="toast"></div>
     <div id="panel" hidden></div>
