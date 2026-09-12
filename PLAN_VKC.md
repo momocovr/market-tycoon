@@ -27,7 +27,7 @@
 | V1 | Blender: パレットテクスチャ焼き込み + 個別 GLB 書き出し（VKC Item Object は glb 直読み可） | ✅ blender/export_vkc.py |
 | V2 | エディタスクリプトでシーン構築（Assets/Editor/MarketTycoonSceneBuilder.cs） | ✅ |
 | V3 | HeliScript: グリッド・A*・経済・客 FSM・保存・HUD（Assets/MarketTycoon/HeliScripts/MarketTycoon.hs） | ✅ コンパイル通過 |
-| V4 | ローカルビルド（SdkBuildRunner.Run をバッチ実行）→ release/ を http.server で配信 → ブラウザ確認 | 進行中: ワールド読込 OK、入室ダイアログ手前 |
+| V4 | ローカルビルド → ブラウザ確認 | ✅ 2026-09-12 入室後に配置・客の行列・購入・保存・目標を確認 |
 | V5 | **ユーザーに通告 → ユーザーがログイン・非公開設定 → アップロード** | |
 
 ## リスク
@@ -46,3 +46,13 @@
 - HeliScript コンパイルエラーはブラウザコンソールに `[HEL006001001] file(line): message` で出る → .hs を release/data/HeliScript に直接コピーして高速反復
 - 未解決: scene JSON の World item の components が [] のまま（HEOScript の component 登録がエクスポートに反映されない可能性）。入室後に HUD が出なければここを調査
 - 入室ダイアログ（利用規約・プライバシーポリシー同意）はユーザー承認待ち
+
+## V4 完了時の追加知見（2026-09-12）
+- 入室でエンジンがカメラと GUI を組み直す → HeliScript 側で毎秒 `SetCamera()` を再適用し、HUD テキストが消えたら（`hsCanvasSetGUIText` が false）レイヤーを再生成
+- HEOCamera の rotate はそのままでは意図通りにならない → スクリプトで位置＋クォータニオン（yaw→pitch を自前計算、`makeQuaternion(x,y,z,w)`）を設定して `SetCamera()`
+- `hsInputScreenToWorldPos` はニアプレーン上の点を返す → カメラ位置からのレイを y=0 平面と交差させて地面座標にする
+- モデルの正面は Blender -Y = エンジン -Z。行列は stall.z - 1 側（FRONT_DZ = -1）
+- `hsInputIsKeyDown` は実ブラウザのキー入力で動作。Browser ペインの合成入力はマウスを押し続ける必要あり
+- `Field.components` は List<string>（コンポーネント名）だが保存時に HEOScript から再生成される。HEOScript.hsComponents に `HsComponentData(name, 0)` を入れ、hsComponent も設定すると `components:["MarketTycoon"]` が出力される
+- python http.server はキャッシュするので、.hs 差し替え時は `fetch(url,{cache:'reload'})` か no-store 版サーバー（serve_release.py、シングルスレッド）を使う
+- ユーザー確認用: release/local.html（SkyWay と loading-override を外した版）。debug.html は rAF 代替入り（ペイン非表示検証用）
