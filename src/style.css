@@ -77,7 +77,7 @@ body.building #game { cursor: copy; }
   background: url(/ui/window.png) no-repeat; background-size: 100% 100%;
   padding: 22px 26px 24px; box-sizing: border-box; font-size: 13px;
 }
-#panel h3 { margin: 0 0 6px; font-size: 16px; display: flex; align-items: center; gap: 6px; }
+#panel h3 { margin: 0 34px 6px 0; font-size: 16px; display: flex; align-items: center; gap: 6px; }
 #panel h3 img { width: 26px; height: 26px; object-fit: contain; }
 #panel .row { display: flex; justify-content: space-between; align-items: center; margin: 5px 0; gap: 6px; }
 #panel .row.buttons { justify-content: center; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
@@ -91,7 +91,13 @@ body.building #game { cursor: copy; }
 #panel .act:active { transform: translateY(2px); filter: none; }
 #panel .act:disabled { opacity: .45; }
 #panel .act.danger { filter: hue-rotate(160deg) saturate(1.2) drop-shadow(0 2px 0 rgba(0,0,0,.18)); }
-#panel .act.small { min-width: 72px; }
+#panel .x {
+  position: absolute; top: 4px; right: 6px; width: 34px; height: 34px;
+  background: url(/ui/round_cream.png) no-repeat; background-size: 100% 100%;
+  font-size: 15px; font-weight: 900; color: #b04a3c; display: grid; place-items: center;
+  filter: drop-shadow(0 2px 0 rgba(0,0,0,.15));
+}
+#panel .x:active { transform: translateY(2px); filter: none; }
 
 /* ---- toasts (nameplate) ---- */
 #toast {

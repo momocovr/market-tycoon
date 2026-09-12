@@ -47,6 +47,11 @@ export class Hud {
     }
     $('reset').addEventListener('click', () => { if (confirm('セーブを消して最初からにしますか？')) cb.onReset(); });
     $('mute').addEventListener('click', () => { $('mute').textContent = sfx.toggleMute() ? '🔇' : '🔊'; });
+    document.addEventListener('pointerdown', (e) => {
+      const panel = $('panel');
+      if (panel.hidden || panel.contains(e.target as Node) || e.target === document.getElementById('game')) return;
+      this.closePanel();
+    });
     window.addEventListener('keydown', (e) => { if (e.key === 'Escape') { this.select(null); this.closePanel(); this.cb.onMove(-1); } });
     this.refresh();
   }
@@ -118,10 +123,11 @@ export class Hud {
     const def = DECORS[d.kind];
     const panel = $('panel');
     panel.innerHTML = `
+      <button class="x" data-a="close" title="閉じる (Esc)">✕</button>
       <h3>${iconHtml(d.kind, def.icon, '')}${def.name}</h3>
       <div class="row"><span>集客ボーナス</span><b>+${Math.round(def.attract * 100)}%</b></div>
       <div class="row buttons"><button class="act" data-a="rotate">⟳ 回転 (T)</button><button class="act" data-a="move">↔ 移動</button></div>
-      <div class="row buttons"><button class="act danger" data-a="remove">撤去 (+${Math.floor(def.cost / 2)})</button><button class="act" data-a="close">閉じる (X)</button></div>`;
+      <div class="row buttons"><button class="act danger" data-a="remove">撤去 (+${Math.floor(def.cost / 2)})</button></div>`;
     panel.querySelectorAll<HTMLButtonElement>('button').forEach((b) => b.addEventListener('click', () => {
       const a = b.dataset.a;
       if (a === 'close') this.closePanel();
@@ -137,13 +143,14 @@ export class Hud {
     const panel = $('panel');
     const sc = upgradeCost(s, 'stock'), pc = upgradeCost(s, 'speed');
     panel.innerHTML = `
+      <button class="x" data-a="close" title="閉じる (Esc)">✕</button>
       <h3>${iconHtml(s.kind, def.icon, '')}${def.name}の露店</h3>
       <div class="row"><span>売れた数</span><b>${s.sold}</b></div>
       <div class="row"><span>単価</span><b>${stallPrice(s)}</b></div>
       <div class="row"><span>接客</span><b>${stallService(s).toFixed(1)}秒</b></div>
       <div class="row"><span>品揃え Lv${s.stockLevel}</span><button class="act" data-a="stock" ${this.state.money < sc ? 'disabled' : ''}>品揃え+ ${sc}</button></div>
       <div class="row"><span>接客 Lv${s.speedLevel}</span><button class="act" data-a="speed" ${this.state.money < pc || stallService(s) <= 0.8 ? 'disabled' : ''}>接客+ ${pc}</button></div>
-      <div class="row buttons"><button class="act small" data-a="move">↔ 移動</button><button class="act small danger" data-a="remove">撤去 +${Math.floor(def.cost / 2)}</button><button class="act small" data-a="close">閉じる</button></div>`;
+      <div class="row buttons"><button class="act" data-a="move">↔ 移動</button><button class="act danger" data-a="remove">撤去 (+${Math.floor(def.cost / 2)})</button></div>`;
     panel.querySelectorAll<HTMLButtonElement>('button').forEach((b) => b.addEventListener('click', () => {
       const a = b.dataset.a;
       if (a === 'close') this.closePanel();

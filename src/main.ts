@@ -322,7 +322,7 @@ canvas.addEventListener('pointerup', (e) => {
   if (dragId !== null) return; // release after a long-press drag (window handler drops it)
   if (Math.hypot(e.clientX - downX, e.clientY - downY) > 8) return; // it was a drag/pan
   const hit = rig.pickGround(e.clientX, e.clientY);
-  if (!hit) return;
+  if (!hit) { hud.closePanel(); return; } // clicked the sky: dismiss the detail window
   const cell = worldToCell(hit.x, hit.z);
   // A click on an existing prop always opens its panel, even while a build kind is selected.
   rig.raycaster.setFromCamera(rig.ndc(e.clientX, e.clientY), rig.camera);
