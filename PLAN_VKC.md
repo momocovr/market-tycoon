@@ -56,3 +56,11 @@
 - `Field.components` は List<string>（コンポーネント名）だが保存時に HEOScript から再生成される。HEOScript.hsComponents に `HsComponentData(name, 0)` を入れ、hsComponent も設定すると `components:["MarketTycoon"]` が出力される
 - python http.server はキャッシュするので、.hs 差し替え時は `fetch(url,{cache:'reload'})` か no-store 版サーバー（serve_release.py、シングルスレッド）を使う
 - ユーザー確認用: release/local.html（SkyWay と loading-override を外した版）。debug.html は rAF 代替入り（ペイン非表示検証用）
+
+## UI 組み込み（2026-09-12）
+- GUI 画像パスの規則: 先頭 `./` でワールドの `data/` 基準（`./Image/x.png` → `data/Image/x.png`）。`Image/...` のような素のパスは CDN の data を探す。絶対 URL も可
+- 画像の同梱: BaseSetting._fileDeploymentConfig に FileDeploymentConfig(SO) を割り当て、`images`(List<Texture2D>) に PNG を入れ、`_deploymentMode = 1`。ビルドで `data/Image/<name>.png`（フラット）に配置される
+- GUI 座標: 下寄せアンカー（LB/CB/RB）は y 負で上、右寄せ（RT/RM/RB）は x 負で内側。ボタン(z3)の上に画像/文字を出すには別レイヤー（z 25）に置く
+- hsCanvasSetGUIShow で個別要素は隠れないことがある → 表示切替はレイヤー単位（hsCanvasSetLayerShow）
+- OnClickedButton(layer, name) で受ける。ワールドクリックは 2 フレーム遅延し、直前に GUI クリックがあれば無効化
+- サーバーは素の `python -m http.server`。Cache-Control: no-store を付けるとエンジンが起動しない。キャッシュ回避は scene JSON / .hs のファイル名を変える（market_tycoonN.json）
