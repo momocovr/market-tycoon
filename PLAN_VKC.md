@@ -64,3 +64,6 @@
 - hsCanvasSetGUIShow で個別要素は隠れないことがある → 表示切替はレイヤー単位（hsCanvasSetLayerShow）
 - OnClickedButton(layer, name) で受ける。ワールドクリックは 2 フレーム遅延し、直前に GUI クリックがあれば無効化
 - サーバーは素の `python -m http.server`。Cache-Control: no-store を付けるとエンジンが起動しない。キャッシュ回避は scene JSON / .hs のファイル名を変える（market_tycoonN.json）
+- GUI ボタンの入力を受けるにはレイヤーを hsWindowModelessAdd(layer) で登録。マイク許可ダイアログ（エンジンのモーダル）が開いている間はワールド入力（マウス座標）が 0,0 になる
+- 効果音: tools/make_sfx.py で MP3 を合成 → Assets/MarketTycoon/Audio → ビルダーが VKC Item Audio（SE_<name>）を生成 → HeliScript で hsItemGet("SE_coin").Play()
+- レベルアップ表示: hsCanvasWorldToScreenPos で露店の頭上座標を取り、FX レイヤーの文字を 1.2 秒上昇
