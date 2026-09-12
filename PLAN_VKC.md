@@ -67,3 +67,6 @@
 - GUI ボタンの入力を受けるにはレイヤーを hsWindowModelessAdd(layer) で登録。マイク許可ダイアログ（エンジンのモーダル）が開いている間はワールド入力（マウス座標）が 0,0 になる
 - 効果音: tools/make_sfx.py で MP3 を合成 → Assets/MarketTycoon/Audio → ビルダーが VKC Item Audio（SE_<name>）を生成 → HeliScript で hsItemGet("SE_coin").Play()
 - レベルアップ表示: hsCanvasWorldToScreenPos で露店の頭上座標を取り、FX レイヤーの文字を 1.2 秒上昇
+- GUI ボタンの押下では、ワールド側の hsInputClickButton も同時に true になり、OnClickedButton はマウスを離した時に届く。ワールドクリックは「離した後 4 フレーム」まで保留し、その間に OnClickedButton が来たら捨てる
+- ボタンが乗るレイヤーだけ hsWindowModelessAdd する。文字/アイコンのレイヤーは登録しない。レイヤーの表示切替や hsCanvasSetGUIPos での移動をしたボタンは当たり判定が不安定 → 操作パネルは常時表示にして文字だけ差し替える
+- GUI は横 1440px 基準で拡縮される（1024 幅で 0.71 倍、1900 幅で 1.32 倍）。ボタンの当たり判定も拡縮後の位置に一致する
